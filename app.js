@@ -24,8 +24,11 @@ async function getBooksData() {
     const booksLinksList = [];
 
     for (const category of categoriesList) {
-      const list = await getBooksLinksList(category);
-      booksLinksList.push(...list);
+      let linksList = await getBooksLinksList(category);
+      linksList.forEach((link) => {
+        if (!booksLinksList.includes(list)) booksLinksList.push(link);
+      });
+      // booksLinksList.push(...linksList);
     }
 
     console.log(`total books found everywhere > ${booksLinksList.length}`);
