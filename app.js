@@ -2,7 +2,7 @@
 // To run the Fidibo Scraper follow the steps <assuming you have install node and npm>
 // In the terminal enter these commands:
 // 1- npm i
-// 2- node app.js > >(tee -a stdout.log) 2> error.log
+// 2- node app.js > >(tee stdout.log) 2> error.log
 
 const cheerio = require("cheerio");
 const axios = require("axios");
@@ -20,6 +20,7 @@ const BASE_URL = "https://fidibo.com";
 async function getBooksData() {
   try {
     const categoriesList = await getCategoriesList();
+    console.log(categoriesList);
     const booksLinksList = [];
 
     for (const category of categoriesList) {
@@ -44,21 +45,29 @@ async function getCategoriesList() {
     const result = await axios.get(BASE_URL);
     const html = result.data;
     const $ = cheerio.load(html);
-    const lists = $(
+    const categoriesList = [];
+    $(
       "#line-navbar-collapse-2 > ul.nav.navbar-nav.nd-navbar-header > li:nth-child(2) > ul > div > li > a"
-    );
-    return parsList(lists); // returns categories-link objects list
+    ).each(function () {
+      const obj = {};
+      obj["link"] = $(this).attr("href");
+      obj["title"] = $(this).attr("title");
+      categoriesList.push(obj);
+    });
+
+    return categoriesList;
+    // return parsList(lists); // returns categories-link objects list
   } catch (error) {
     console.error(error);
   }
 }
 
-function parsList(lists) {
-  return Array.from(lists).map((li) => ({
-    link: li.attribs.href,
-    title: li.attribs.title,
-  }));
-}
+// function parsList(lists) {
+//   return Array.from(lists).map((li) => ({
+//     link: li.attribs.href,
+//     title: li.attribs.title,
+//   }));
+// }
 
 async function getBooksLinksList(category) {
   try {
@@ -67,7 +76,7 @@ async function getBooksLinksList(category) {
     let result = await axios.get(`${BASE_URL}${category.link}`);
     let html = result.data;
     let $ = cheerio.load(html);
-    const totalPages = toEnglishDigitConvertor(getCategoryTotalPages($));
+    const totalPages = getCategoryTotalPages($);
 
     console.log(`${category.link}> ${totalPages}`);
 
@@ -95,6 +104,7 @@ async function getBooksLinksList(category) {
     return booksLinks;
   } catch (error) {
     console.error("category page load failed...!");
+    console.error(error);
   }
 }
 
@@ -197,7 +207,8 @@ function dataParser($, isAudioBook, bookLink) {
 function getCategoryTotalPages($) {
   const pages = $("#result > div.pagination > ul > li:nth-last-child(3)");
   const pagesCount = pages.find("a").text();
-  return pagesCount;
+  const enDigitsPagesCount = toEnglishDigitConvertor(pagesCount);
+  return enDigitsPagesCount < 10 ? enDigitsPagesCount : 10;
 }
 
 getBooksData();
