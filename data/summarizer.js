@@ -12,6 +12,8 @@ fs.writeFile(
   (error) => {
     error
       ? console.log(error)
-      : console.log("Successfully written into the file..!");
+      : console.log(
+          "100 of each type of books successfully written into the summarized file..!"
+        );
   }
 );
