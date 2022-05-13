@@ -2,7 +2,7 @@
 // To run the Fidibo Scraper follow the steps <assuming you have install node and npm>
 // In the terminal enter these commands:
 // 1- npm i
-// 2- node app.js > >(tee stdout.log) 2> error.log
+// 2- time node app.js > >(tee ../log/output.log) 2> ../log/error.log
 
 const cheerio = require("cheerio");
 const axios = require("axios");
@@ -15,31 +15,41 @@ const allBooksData = {
   audioBooks: [],
 };
 
+const booksLinks = [];
+
 const BASE_URL = "https://fidibo.com";
 
 async function getBooksData() {
+  // step 1 > get categories
+  // step 2 > get all books links
+  // step 3 > get books data
   try {
     const categoriesList = await getCategoriesList();
     console.log(categoriesList);
-    const booksLinksList = [];
 
+    const promisesList = [];
     for (const category of categoriesList) {
-      let linksList = await getBooksLinksList(category);
-      linksList.forEach((link) => {
-        if (!booksLinksList.includes(list)) booksLinksList.push(link);
-      });
-      // booksLinksList.push(...linksList);
+      promisesList.push(getBooksLinks(category));
     }
+    await Promise.all(promisesList);
 
-    console.log(`total books found everywhere > ${booksLinksList.length}`);
+    console.log(`total books found everywhere > ${booksLinks.length}`);
 
-    for (const bookLink of booksLinksList) {
-      await findBookData(bookLink.trim());
+    await fs.writeFile("../data/books-links.json", JSON.stringify(booksLinks));
+
+    for (const bookLink of booksLinks) {
+      promisesList.push(findBookData(bookLink.trim()));
     }
+    await Promise.all(promisesList);
+    await fs.writeFile("../data/books-data.json", JSON.stringify(allBooksData));
 
     console.log("All books data retrieved!!");
   } catch (error) {
-    console.error(error);
+    const err = {
+      status: error?.response?.status,
+      text: error?.response?.statusText,
+    };
+    console.error(err ?? error);
   }
 }
 
@@ -61,7 +71,11 @@ async function getCategoriesList() {
     return categoriesList;
     // return parsList(lists); // returns categories-link objects list
   } catch (error) {
-    console.error(error);
+    const err = {
+      status: error?.response?.status,
+      text: error?.response?.statusText,
+    };
+    console.error(err ?? error);
   }
 }
 
@@ -72,42 +86,54 @@ async function getCategoriesList() {
 //   }));
 // }
 
-async function getBooksLinksList(category) {
+async function getPagesBooksLinks(pageNumber, categoryLink) {
   try {
-    const booksLinks = [];
+    result = await axios.get(`${BASE_URL}${categoryLink}?page=${pageNumber}`);
+    let html = result.data;
+    let $ = cheerio.load(html);
+    $("#item_list > div > div > div.item-image > a").each(function () {
+      const newBookLink = $(this).attr("href");
+      if (!booksLinks.includes(newBookLink)) booksLinks.push(newBookLink);
+    });
+    console.log(`${categoryLink} page ${pageNumber} books links retrieved!`);
+    // await fs.writeFile("../data/books-links.json", JSON.stringify(booksLinks));
+  } catch (error) {
+    const err = {
+      status: error?.response?.status,
+      text: error?.response?.statusText,
+    };
+    console.error(err ?? error);
+  }
+}
 
-    let result = await axios.get(`${BASE_URL}${category.link}`);
+async function getBooksLinks(category) {
+  const categoryLink = category.link;
+  try {
+    let result = await axios.get(`${BASE_URL}${categoryLink}`);
     let html = result.data;
     let $ = cheerio.load(html);
     const totalPages = getCategoryTotalPages($);
 
-    console.log(`${category.link}> ${totalPages}`);
+    console.log(`${categoryLink}> ${totalPages}`);
 
     $("#item_list > div > div > div.item-image > a").each(function () {
       booksLinks.push($(this).attr("href"));
     });
-    console.log(`Page 1 Books Links Retrieved!`);
 
+    console.log(`${categoryLink} page 1 books links retrieved!`);
+
+    const promisesList = [];
     for (let pageNumber = 2; pageNumber <= totalPages; pageNumber++) {
-      result = await axios.get(
-        `${BASE_URL}${category.link}?page=${pageNumber}`
-      );
-      let html = result.data;
-      let $ = cheerio.load(html);
-      $("#item_list > div > div > div.item-image > a").each(function () {
-        const newBookLink = $(this).attr("href");
-        if (!booksLinks.includes(newBookLink)) booksLinks.push(newBookLink);
-      });
-      console.log(`Page ${pageNumber} Books Links Retrieved!`);
+      promisesList.push(getPagesBooksLinks(pageNumber, categoryLink));
     }
-
-    console.log(`${category.title} category all books links >`);
-    console.log(booksLinks);
-
-    return booksLinks;
+    await Promise.all(promisesList);
   } catch (error) {
     console.error("category page load failed...!");
-    console.error(error);
+    const err = {
+      status: error?.response?.status,
+      text: error?.response?.statusText,
+    };
+    console.error(err ?? error);
   }
 }
 
@@ -122,10 +148,14 @@ async function findBookData(bookLink) {
     const bookData = dataParser($, Boolean(isAudioBook), bookLink);
     allBooksData[`${bookData.type.en}s`].push(bookData);
 
-    await fs.writeFile("./data.json", JSON.stringify(allBooksData));
+    await fs.writeFile("../data/books-data.json", JSON.stringify(allBooksData));
     console.log(`Book data added, It's link is > ${bookLink}`);
   } catch (error) {
-    console.error(error);
+    const err = {
+      status: error?.response?.status,
+      text: error?.response?.statusText,
+    };
+    console.error(err ?? error);
   }
 }
 
@@ -136,17 +166,20 @@ function dataParser($, isAudioBook, bookLink) {
       en: isAudioBook ? "audioBook" : "eBook",
       fa: isAudioBook ? "کتاب صوتی" : "کتاب الکترونیکی",
     },
-    path: bookLink,
+    path: `${BASE_URL}${bookLink}`,
   };
   let splittedData = [];
+  let removableWords = [];
   for (const key in selector) {
     switch (key) {
       case "title":
+        removableWords = ["کتاب", "صوتی", "پادکست"];
         const pathString = bookLink.substring(bookLink.indexOf("/", 1));
         const pathArray = pathString.split("-");
-        pathArray.shift();
-        pathArray.shift();
-        if (isAudioBook) pathArray.shift();
+        pathArray.shift(); // to remove book id
+        if (removableWords.includes(pathArray[0])) pathArray.shift();
+        if (isAudioBook && removableWords.includes(pathArray[0]))
+          pathArray.shift();
         console.log(pathArray);
         bookData[key] = pathArray.join(" "); // as title of the book
         break;
@@ -170,8 +203,10 @@ function dataParser($, isAudioBook, bookLink) {
         break;
 
       case "publisher":
+        removableWords = ["نشر", "انتشارات"];
         splittedData = $(selector[key]).text().trim().split(" ");
-        bookData[key] = splittedData[splittedData.length - 1];
+        if (removableWords.includes(splittedData[0])) splittedData.shift();
+        bookData[key] = splittedData.join(" ");
         break;
 
       case "category":
@@ -186,13 +221,17 @@ function dataParser($, isAudioBook, bookLink) {
 
       case "printedPrice":
         splittedData = $(selector[key]).text().trim().split(" ");
-        bookData[key] = splittedData[splittedData.length - 2];
+        bookData[key] = toEnglishDigitConvertor(
+          splittedData[splittedData.length - 2]
+        );
         break;
 
       case "fileSize":
       case "pagesCount":
       case "price":
-        bookData[key] = $(selector[key]).text().trim().split(" ")[0];
+        bookData[key] = toEnglishDigitConvertor(
+          $(selector[key]).text().trim().split(" ")[0]
+        );
         break;
 
       case "coverLink":
@@ -211,7 +250,7 @@ function getCategoryTotalPages($) {
   const pages = $("#result > div.pagination > ul > li:nth-last-child(3)");
   const pagesCount = pages.find("a").text();
   const enDigitsPagesCount = toEnglishDigitConvertor(pagesCount);
-  return enDigitsPagesCount < 10 ? enDigitsPagesCount : 10;
+  return enDigitsPagesCount < 3 ? enDigitsPagesCount : 3;
 }
 
 getBooksData();

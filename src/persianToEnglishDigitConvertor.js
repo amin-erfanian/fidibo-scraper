@@ -3,8 +3,10 @@ function toEnglishDigitConvertor(number) {
 
   return number
     .split("")
-    .map((givenFaDigit) =>
-      farsiDigits.findIndex((faDigit) => faDigit === givenFaDigit)
+    .map((givenChar) =>
+      farsiDigits.includes(givenChar)
+        ? farsiDigits.findIndex((faDigit) => faDigit === givenChar)
+        : givenChar
     )
     .join("");
 }
