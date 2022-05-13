@@ -2,9 +2,9 @@ const eBookSelector = {
   title:
     "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > h1",
   authors:
-    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(1) > li:nth-child(1) > a",
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(1) > a",
   translators:
-    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(1) > li:nth-child(2) > a",
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(2) > a",
   price:
     "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-3.col-sm-4.text-center.action-area > div > div > span",
   printedPrice:
@@ -33,11 +33,11 @@ const audioBookSelector = {
   title:
     "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > h1",
   authors:
-    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(1) > li:nth-child(1) > a",
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(1) > a",
   translators:
-    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(1) > li:nth-child(2) > a",
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(2) > a",
   narrators:
-    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(1) > li:nth-child(3) > a",
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(3) > a",
   price:
     "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-3.col-sm-4.text-center.action-area > div > div > span",
   description: [
@@ -57,5 +57,37 @@ const audioBookSelector = {
   coverLink: "#book_img",
 };
 
+const audioBookWithPrintedPriceSelector = {
+  title:
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > h1",
+  authors:
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(1) > a",
+  translators:
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(2) > a",
+  narrators:
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-6.col-sm-5.col-xs-12 > div > div > div.col-sm-11 > ul:nth-child(2) > li:nth-child(3) > a",
+  price:
+    "#content > div.single2 > article > div:nth-child(1) > div > div.col-md-3.col-sm-4.text-center.action-area > div > div > span",
+  printedPrice:
+    "#content > div.single2 > section > div > div > ul > li:nth-child(2) > span",
+  description: [
+    "#content > div.single2 > article > section > div > section > div.book-description p:nth-child(1)",
+    "#fade-content > p",
+  ],
+  publisher:
+    "#content > div.single2 > section > div > div > ul > li:nth-child(1) > a",
+  publishedDate:
+    "#content > div.single2 > section > div > div > ul > li:nth-child(3) > span",
+  language:
+    "#content > div.single2 > section.book-tag-section > div > div > ul > li:nth-child(4)",
+  fileSize:
+    "#content > div.single2 > section.book-tag-section > div > div > ul > li:nth-child(5)",
+  category:
+    "body > div.alert.HeadAlert.text-center.top-toolbar > nav > ul > li",
+  coverLink: "#book_img",
+};
+
 module.exports.eBookSelector = eBookSelector;
 module.exports.audioBookSelector = audioBookSelector;
+module.exports.audioBookWithPrintedPriceSelector =
+  audioBookWithPrintedPriceSelector;
