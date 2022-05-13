@@ -13,8 +13,7 @@ const {
   podcastSelector,
 } = require("./selectors");
 const toEnglishDigitConvertor = require("./persianToEnglishDigitConvertor");
-const { title } = require("process");
-
+let SLEEP_TIME = 15000;
 const allBooksData = {
   eBooks: [],
   audioBooks: [],
@@ -30,7 +29,7 @@ async function getBooksData() {
   // step 3 > get books data
   try {
     let categoriesList = await getCategoriesList();
-    // categoriesList = categoriesList.slice(0, 10);
+    // categoriesList = categoriesList.slice(0, 2);
     console.log(categoriesList);
 
     const promisesList = [];
@@ -55,6 +54,10 @@ async function getBooksData() {
       status: error?.response?.status,
       text: error?.response?.statusText,
     };
+
+    if (err.status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, SLEEP_TIME));
+    }
     console.error(err.status ? err : error);
   }
 }
@@ -81,6 +84,9 @@ async function getCategoriesList() {
       status: error?.response?.status,
       text: error?.response?.statusText,
     };
+    if (err.status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, SLEEP_TIME));
+    }
     console.error(err.status ? err : error);
   }
 }
@@ -108,6 +114,9 @@ async function getPagesBooksLinks(pageNumber, categoryLink) {
       status: error?.response?.status,
       text: error?.response?.statusText,
     };
+    if (err.status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, SLEEP_TIME));
+    }
     console.error(err.status ? err : error);
   }
 }
@@ -139,6 +148,9 @@ async function getBooksLinks(category) {
       status: error?.response?.status,
       text: error?.response?.statusText,
     };
+    if (err.status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, SLEEP_TIME));
+    }
     console.error(err.status ? err : error);
   }
 }
@@ -149,6 +161,7 @@ async function findBookData(bookLink) {
     const html = result.data;
     const $ = cheerio.load(html);
 
+    // getBookType(bookLink);
     const bookData = dataParser($, bookLink);
     allBooksData[`${bookData.type.en}s`].push(bookData);
 
@@ -159,6 +172,9 @@ async function findBookData(bookLink) {
       status: error?.response?.status,
       text: error?.response?.statusText,
     };
+    if (err.status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, SLEEP_TIME));
+    }
     console.error(err.status ? err : error);
   }
 }
@@ -167,10 +183,10 @@ function getBookType(bookLink) {
   const books = [
     { type: "podcast", searchKey: "پادکست" },
     { type: "audioBook", searchKey: "صوتی" },
-    { selector: "eBook", searchKey: "کتاب" },
+    { type: "eBook", searchKey: "کتاب" },
   ];
   for (const book of books) {
-    if (bookLink.indexOf(book.searchKey)) {
+    if (bookLink.indexOf(book.searchKey) > 0) {
       return book.type;
     }
   }
@@ -178,24 +194,14 @@ function getBookType(bookLink) {
 }
 
 function dataParser($, bookLink) {
-  const type = getBookType(bookLink);
+  const bookType = getBookType(bookLink);
   let selector;
+  let isAudioBook;
 
-  if (type === "audioBook") {
-    if (
-      $(
-        "#content > div.single2 > section > div > div > ul > li:nth-child(2) > span"
-      )
-        .text()
-        .indexOf("قیمت") >= 0
-    )
-      selector = audioBookWithPrintedPriceSelector;
-  }
-
-  if (type === "podcast") {
+  if (bookType === "podcast") {
     selector = podcastSelector;
     isAudioBook = true;
-  } else if (type === "audioBook") {
+  } else if (bookType === "audioBook") {
     if (
       $(
         "#content > div.single2 > section > div > div > ul > li:nth-child(2) > span"
@@ -208,7 +214,7 @@ function dataParser($, bookLink) {
       selector = audioBookSelector;
     }
     isAudioBook = true;
-  } else if (type === "eBook") {
+  } else if (bookType === "eBook") {
     selector = eBookSelector;
     isAudioBook = false;
   }
