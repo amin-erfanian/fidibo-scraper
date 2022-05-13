@@ -10,8 +10,10 @@ const {
   eBookSelector,
   audioBookSelector,
   audioBookWithPrintedPriceSelector,
+  podcastSelector,
 } = require("./selectors");
 const toEnglishDigitConvertor = require("./persianToEnglishDigitConvertor");
+const { title } = require("process");
 
 const allBooksData = {
   eBooks: [],
@@ -147,20 +149,7 @@ async function findBookData(bookLink) {
     const html = result.data;
     const $ = cheerio.load(html);
 
-    const aBook = {};
-    aBook["isAudioBook"] =
-      $(audioBookSelector["title"]).text().indexOf("صوتی") >= 0;
-
-    if (aBook["isAudioBook"]) {
-      aBook["hasPrintedPrice"] =
-        $(
-          "#content > div.single2 > section > div > div > ul > li:nth-child(2) > span"
-        )
-          .text()
-          .indexOf("قیمت") >= 0;
-    }
-
-    const bookData = dataParser($, aBook, bookLink);
+    const bookData = dataParser($, bookLink);
     allBooksData[`${bookData.type.en}s`].push(bookData);
 
     await fs.writeFile("../data/books-data.json", JSON.stringify(allBooksData));
@@ -174,17 +163,60 @@ async function findBookData(bookLink) {
   }
 }
 
-function dataParser($, aBook, bookLink) {
-  const selector = aBook.isAudioBook
-    ? aBook.hasPrintedPrice
-      ? audioBookWithPrintedPriceSelector
-      : audioBookSelector
-    : eBookSelector;
+function getBookType(bookLink) {
+  const books = [
+    { type: "podcast", searchKey: "پادکست" },
+    { type: "audioBook", searchKey: "صوتی" },
+    { selector: "eBook", searchKey: "کتاب" },
+  ];
+  for (const book of books) {
+    if (bookLink.indexOf(book.searchKey)) {
+      return book.type;
+    }
+  }
+  return "eBook";
+}
+
+function dataParser($, bookLink) {
+  const type = getBookType(bookLink);
+  let selector;
+
+  if (type === "audioBook") {
+    if (
+      $(
+        "#content > div.single2 > section > div > div > ul > li:nth-child(2) > span"
+      )
+        .text()
+        .indexOf("قیمت") >= 0
+    )
+      selector = audioBookWithPrintedPriceSelector;
+  }
+
+  if (type === "podcast") {
+    selector = podcastSelector;
+    isAudioBook = true;
+  } else if (type === "audioBook") {
+    if (
+      $(
+        "#content > div.single2 > section > div > div > ul > li:nth-child(2) > span"
+      )
+        .text()
+        .indexOf("قیمت") >= 0
+    ) {
+      selector = audioBookWithPrintedPriceSelector;
+    } else {
+      selector = audioBookSelector;
+    }
+    isAudioBook = true;
+  } else if (type === "eBook") {
+    selector = eBookSelector;
+    isAudioBook = false;
+  }
 
   const bookData = {
     type: {
-      en: aBook.isAudioBook ? "audioBook" : "eBook",
-      fa: aBook.isAudioBook ? "کتاب صوتی" : "کتاب الکترونیکی",
+      en: isAudioBook ? "audioBook" : "eBook",
+      fa: isAudioBook ? "کتاب صوتی" : "کتاب الکترونیکی",
     },
     bookLink: `${BASE_URL}${bookLink}`,
   };
@@ -193,12 +225,12 @@ function dataParser($, aBook, bookLink) {
   for (const key in selector) {
     switch (key) {
       case "title":
-        removableWords = ["کتاب", "صوتی", "پادکست"];
+        removableWords = ["کتاب", "صوتی", "پادکست", "pdf"];
         const pathString = bookLink.substring(bookLink.indexOf("/", 1));
         const pathArray = pathString.split("-");
         pathArray.shift(); // to remove book id
         if (removableWords.includes(pathArray[0])) pathArray.shift();
-        if (aBook.isAudioBook && removableWords.includes(pathArray[0]))
+        if (isAudioBook && removableWords.includes(pathArray[0]))
           pathArray.shift();
         console.log(pathArray);
         bookData[key] = pathArray.join(" "); // as title of the book
@@ -274,8 +306,8 @@ function getCategoryTotalPages($) {
   const pages = $("#result > div.pagination > ul > li:nth-last-child(3)");
   const pagesCount = pages.find("a").text();
   const enDigitsPagesCount = toEnglishDigitConvertor(pagesCount);
-  return enDigitsPagesCount;
   // return enDigitsPagesCount < 2 ? enDigitsPagesCount : 2;
+  return enDigitsPagesCount;
 }
 
 getBooksData();
